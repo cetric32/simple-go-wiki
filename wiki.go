@@ -38,7 +38,13 @@ func loadPage(title string) (*Page, error) {
 
 func handler(resp http.ResponseWriter, req *http.Request) {
 	println("Incoming Request", req.URL.Path)
-	fmt.Fprintf(resp, "Hi there, I love %s!", req.URL.Path[1:])
+	path := req.URL.Path[1:]
+
+	if len(path) == 0 {
+		http.Redirect(resp, req, "/view/FrontPage", http.StatusFound)
+	} else {
+		fmt.Fprintf(resp, "Hi there, I love %s!", path)
+	}
 }
 
 func viewHandler(resp http.ResponseWriter, req *http.Request) {
@@ -79,6 +85,12 @@ func newEditHandler(resp http.ResponseWriter, req *http.Request, title string) {
 
 func newViewHandler(resp http.ResponseWriter, req *http.Request, title string) {
 	p, err := loadPage(title)
+
+	if title == "FrontPage" {
+		renderTemplate(resp, "front", p)
+
+		return
+	}
 
 	if err != nil {
 		http.Redirect(resp, req, "/edit/"+title, http.StatusFound)
@@ -165,5 +177,4 @@ func main() {
 	http.HandleFunc("/view/", makeHandler(newViewHandler))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
-
 }
