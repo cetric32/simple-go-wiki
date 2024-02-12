@@ -15,8 +15,10 @@ type Page struct {
 	Body  []byte
 }
 
-var templatesDir = "templates/*.html"
-var templates = template.Must(template.ParseGlob(templatesDir))
+// var templatesDir = "templates/*.html"
+// var templates = template.Must(template.ParseGlob(templatesDir))
+var templates = make(map[string]*template.Template)
+
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 func (p *Page) Save() error {
@@ -84,20 +86,29 @@ func newEditHandler(resp http.ResponseWriter, req *http.Request, title string) {
 }
 
 func newViewHandler(resp http.ResponseWriter, req *http.Request, title string) {
-	p, err := loadPage(title)
-
 	if title == "FrontPage" {
-		renderTemplate(resp, "front", p)
+		println("here 0")
+		renderTemplate(resp, "front", &Page{})
 
 		return
 	}
 
+	println("here 1")
+
+	p, err := loadPage(title)
+	println("here 2")
+
 	if err != nil {
+		println("here 3")
 		http.Redirect(resp, req, "/edit/"+title, http.StatusFound)
 
 	}
 
+	println("here 4")
+
 	renderTemplate(resp, "view", p)
+
+	println("here 5")
 }
 
 func saveHandler(resp http.ResponseWriter, req *http.Request, title string) {
@@ -116,8 +127,30 @@ func saveHandler(resp http.ResponseWriter, req *http.Request, title string) {
 }
 
 func renderTemplate(resp http.ResponseWriter, temp string, p *Page) {
+	var err error
 
-	err := templates.ExecuteTemplate(resp, temp+".html", p)
+	// err := templates.ExecuteTemplate(resp, temp+".html", p)
+
+	// if err != nil {
+	// 	http.Error(resp, err.Error(), http.StatusInternalServerError)
+	// }
+
+	t, ok := templates[temp]
+
+	if !ok {
+		println("Template not found")
+		t, err = template.ParseFiles("templates/"+"base"+".html", "templates/"+temp+".html")
+
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+		}
+
+		templates[temp] = t
+	} else {
+		println("Template found")
+	}
+
+	err = t.Execute(resp, p)
 
 	if err != nil {
 		http.Error(resp, err.Error(), http.StatusInternalServerError)
