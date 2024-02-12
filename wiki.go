@@ -15,16 +15,17 @@ type Page struct {
 	Body  []byte
 }
 
-var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
+var templatesDir = "templates/*.html"
+var templates = template.Must(template.ParseGlob(templatesDir))
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 func (p *Page) Save() error {
-	filename := p.Title + ".txt"
+	filename := "data/" + p.Title + ".txt"
 	return os.WriteFile(filename, p.Body, 0600)
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
+	filename := "data/" + title + ".txt"
 
 	body, error := os.ReadFile(filename)
 
@@ -103,14 +104,6 @@ func saveHandler(resp http.ResponseWriter, req *http.Request, title string) {
 }
 
 func renderTemplate(resp http.ResponseWriter, temp string, p *Page) {
-	// t, err := template.ParseFiles(temp + ".html")
-
-	// if err != nil {
-	// 	http.Error(resp, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// err = t.Execute(resp, p)
 
 	err := templates.ExecuteTemplate(resp, temp+".html", p)
 
@@ -146,14 +139,25 @@ func makeHandler(fn func(resp http.ResponseWriter, req *http.Request, title stri
 	}
 }
 
+func createFolders() error {
+	_, err := os.Stat("data")
+
+	if os.IsNotExist(err) {
+		println("Data folder does not exist,creating the folder now")
+		err = os.Mkdir("data", 0755)
+	} else {
+		println("Data folder exists")
+	}
+
+	return err
+}
+
 func main() {
-	// p1 := Page{Title: "hello", Body: []byte("Hello world, see you there")}
+	error := createFolders()
 
-	// p1.Save()
-
-	// p2, _ := loadPage("hello")
-
-	// println(string(p2.Body))
+	if error != nil {
+		println("Application error", error)
+	}
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/edit/", makeHandler(newEditHandler))

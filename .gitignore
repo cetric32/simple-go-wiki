@@ -22,3 +22,4 @@ go.work
 
 # text files
 *txt
+/data
